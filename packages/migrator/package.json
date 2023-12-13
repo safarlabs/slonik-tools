@@ -1,6 +1,6 @@
 {
-  "name": "@slonik/migrator",
-  "version": "0.12.0",
+  "name": "@safarlabs/slonik-migrator",
+  "version": "0.12.1",
   "description": "database migration tool using slonik",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,7 +9,10 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mmkal/slonik-tools.git"
+    "url": "git+https://github.com/safarlabs/slonik-tools.git"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
   },
   "keywords": [
     "slonik"
@@ -17,21 +20,24 @@
   "author": "mmkal",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/mmkal/slonik-tools/issues"
+    "url": "https://github.com/safarlabs/slonik-tools/issues"
   },
-  "homepage": "https://github.com/mmkal/slonik-tools/tree/master/packages/migrator#readme",
+  "homepage": "https://github.com/safarlabs/slonik-tools/tree/master/packages/migrator#readme",
   "dependencies": {
     "@rushstack/ts-command-line": "^4.11.0",
     "umzug": "^3.1.1"
   },
   "peerDependencies": {
-    "slonik": "27 - 29"
+    "slonik": "*",
+    "zod": "*"
   },
   "devDependencies": {
     "@types/dedent": "0.7.0",
     "@types/lodash": "4.14.182",
     "dedent": "0.7.0",
     "lodash": "4.17.21",
-    "strip-ansi": "7.0.1"
+    "strip-ansi": "7.0.1",
+    "zod": "^3.22.4",
+    "slonik": "^34.0.1"
   }
 }

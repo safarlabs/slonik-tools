@@ -6,6 +6,7 @@ import {sql, DatabaseTransactionConnection, DatabasePoolConnection, DatabasePool
 import * as path from 'path'
 import {CommandLineAction, CommandLineFlagParameter} from '@rushstack/ts-command-line'
 import * as templates from './templates'
+import {z} from 'zod'
 
 interface SlonikMigratorContext {
   parent: DatabasePool
@@ -137,7 +138,7 @@ export class SlonikMigrator extends umzug.Umzug<SlonikMigratorContext> {
   }
 
   protected async getOrCreateMigrationsTable(context: SlonikMigratorContext) {
-    await context.parent.query(sql`
+    await context.parent.query(sql.unsafe`
       create table if not exists ${this.migrationTableNameIdentifier()}(
         name text primary key,
         hash text not null,
@@ -159,14 +160,14 @@ export class SlonikMigrator extends umzug.Umzug<SlonikMigratorContext> {
               }),
             1000,
           )
-          await conn.any(context.sql`select pg_advisory_lock(${this.advisoryLockId()})`)
+          await conn.any(context.sql.unsafe`select pg_advisory_lock(${this.advisoryLockId()})`)
 
           try {
             clearTimeout(timeout)
             const result = await cb({context})
             return result
           } finally {
-            await conn.any(context.sql`select pg_advisory_unlock(${this.advisoryLockId()})`).catch(error => {
+            await conn.any(context.sql.unsafe`select pg_advisory_unlock(${this.advisoryLockId()})`).catch(error => {
               this.slonikMigratorOptions.logger?.error({
                 message: `Failed to unlock. This is expected if the lock acquisition timed out. Otherwise, you may need to run "select pg_advisory_unlock(${this.advisoryLockId()})" manually`,
                 originalError: error,
@@ -243,7 +244,9 @@ export class SlonikMigrator extends umzug.Umzug<SlonikMigratorContext> {
    */
   private async executedInfos(context: SlonikMigratorContext): Promise<MigrationInfo[]> {
     await this.getOrCreateMigrationsTable(context)
-    const migrations = await context.parent.any(sql`select name, hash from ${this.migrationTableNameIdentifier()}`)
+    const migrations = await context.parent.any(
+      sql.unsafe`select name, hash from ${this.migrationTableNameIdentifier()}`,
+    )
 
     return migrations.map(r => {
       const name = r.name as string
@@ -256,20 +259,20 @@ export class SlonikMigrator extends umzug.Umzug<SlonikMigratorContext> {
   }
 
   protected async logMigration({name, context}: {name: string; context: SlonikMigratorContext}) {
-    await context.connection.query(sql`
+    await context.connection.query(sql.unsafe`
       insert into ${this.migrationTableNameIdentifier()}(name, hash)
       values (${name}, ${this.hash(name)})
     `)
   }
 
   protected async unlogMigration({name, context}: {name: string; context: SlonikMigratorContext}) {
-    await context.connection.query(sql`
+    await context.connection.query(sql.unsafe`
       delete from ${this.migrationTableNameIdentifier()}
       where name = ${name}
     `)
   }
   protected async repairMigration({name, hash, context}: {name: string; hash: string; context: SlonikMigratorContext}) {
-    await context.connection.query(sql`
+    await context.connection.query(sql.unsafe`
       update ${this.migrationTableNameIdentifier()}
       set hash = ${hash}
       where name = ${name}
@@ -320,10 +323,11 @@ export interface SlonikMigratorOptions {
  * More reliable than slonik-sql-tag-raw: https://github.com/gajus/slonik-sql-tag-raw/issues/6
  * But doesn't sanitise any inputs, so shouldn't be used with templates
  */
-const rawQuery = (query: string): ReturnType<typeof sql> => ({
-  type: 'SLONIK_TOKEN_SQL',
+const rawQuery = (query: string): ReturnType<typeof sql.unsafe> => ({
+  type: 'SLONIK_TOKEN_QUERY',
   sql: query,
   values: [],
+  parser: z.any(),
 })
 
 /**
